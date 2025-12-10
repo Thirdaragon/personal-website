@@ -1,0 +1,33 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    function isAdmin() {
+      return request.auth != null && 
+             (request.auth.token.email == 'third.aragon123@gmail.com');
+    }
+    
+    function isLoggedIn() {
+      return request.auth != null;
+    }
+
+    match /blogs/{blogId} {
+      allow read: if true;
+      allow write: if isAdmin(); // Admins have full control (create/edit/delete)
+
+      match /comments/{commentId} {
+        allow read: if true;
+        allow create: if isLoggedIn();
+        // User can delete their own comment OR Admin can delete any comment
+        allow delete: if request.auth.uid == resource.data.uid || isAdmin();
+
+        match /replies/{replyId} {
+          allow read: if true;
+          allow create: if isLoggedIn();
+          // User can delete their own reply OR Admin can delete any reply
+          allow delete: if request.auth.uid == resource.data.uid || isAdmin();
+        }
+      }
+    }
+  }
+}
